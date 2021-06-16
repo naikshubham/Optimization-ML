@@ -11,9 +11,10 @@
 #### Example
 - Use LP to decide on an excercise routine to burn as many calories as possible in 10 mins
 
-           Pushup            | Running
-Minutes | 0.2min per pushup  | 10min per mile
-Calories| 3cal per pushup    | 130cal per mile 
+tbl     |     Pushup         | Running          |
+:------:|:------------------:|:----------------:|
+Minutes | 0.2min per pushup  | 10min per mile   |
+Calories| 3cal per pushup    | 130cal per mile  |
 
 - Constraint - only 10 minutes to excercise
 - Based on the chart what combination of push-ups and running should we do? Model it as LP problem
@@ -27,4 +28,112 @@ Calories| 3cal per pushup    | 130cal per mile
 - 0.2 * Number of Pushups + 10 * Number of miles <=10 : The first constraint captures how many minutes it takes to perform the excercise which must be less than or equal to 10 minutes
 - Number of Pushups >= 0 : We also want to ensure our decision variables are not negative
 - NUmber of Miles >= 0 
+
+<p align="center">
+  <img src="data/cs1.PNG" width="350" title="optimization">
+</p>
+
+- The points in the blue area of the graph all satisfy the constraints. To find the overall point that maximizes the calories burned, we can randomly test the shaded area but that would take a long time. In this example the optimal solution is 50 push ups and 0 miles. 
+
+#### LP vs IP vs MIP
+
+Terms                          | Decision Variables
+Linear Programming(LP)         | Only continuos
+Integer Programming(IP)        | Only Decrete or Integers 
+Mixed Integer Programming(MIP) | Mix of continuos and Discrete
+
+- In our example, our decision variables were the number of pushups and the miles ran. We modeled them as continuos variables, meaning the optimal result could mean performing 0.5 push-ups or run 0.1 of a mile.
+- The continuous nature of the decision variables make this a linear programming problem.
+
+### Basics of PuLP modeling
+- PuLP is a modeling framework for Linear(LP) and Integer Programming(IP) problems.
+- PuLP models the problem in python, but relies on a solver to compute a solution.It works with many different solvers like CPLEX, COIN, Gurobi etc.
+
+#### PuLP example - resource scheduling
+- Image we are a consultant for a cake bakery that sells only two types of cakes. We are attempting to schedule the resources of the bakery for the next 30 days.
+- There is an oven, two bakers and a person who packages the cake.
+- In this case, we assume the person packaging will only work 22 of the next 30 days, due to vacation. The amount of time needed with each resource is different for each type of cake. Additionally the profit for the cakes are different.
+
+ tbl   |Cake A     | Cake B      |
+:-----:|:---------:|:-----------:|
+Oven   | 0.5 days  | 1 day       |
+bakers | 1 day     | 2.5 days    |
+packers| 1 day     | 2 days      |
+
+
+tbl    | Cake A    | Cake B      |
+:-----:|:---------:|:-----------:|
+Profit |  $20.00   | $40.00      |
+
+##### Objective
+- Objective is to Maximize profit : `Profit = 20 * A + 40 * B`
+- We want to know how many of each type of cake we should make to maximize our profits. Remeber that our profits are subject to the different constraints.
+
+##### Constraints
+- Subject to `A >=0 , B >=0`
+- The number of cakes produced must be greater than zero.
+- `0.5A + 1B <= 30` : The number of cakes of each type produced multiplied by the time needed on the oven gives the total number of days, and this cannot exceed 30 days.
+- `1A + 2.5B <= 60` : A similar situtation exists for the bakers. However, because there are 2 bakers the total number of days should not exceed 60 days.
+- `1A + 2B <= 22` : Finally, the worker packing is only available 22 days this month.
+- **To solve our example we will model it in PuLP**
+
+#### Common modeling process for PuLP
+- A common modeling process involves **initializing the model** , **defining the decision variables** , **defining the objective function** , **defining the model constraints** and finally we **solve the model**
+
+##### Initializing model - LpProblem()
+- Initializing the model is the first step in the modeling process and for that we use the LpProblem function.
+
+```python
+LpProblem(name='NoName', sense=LpMinimize)
+```
+
+- It has two inputs first is the text input for the type of problem we are modeling. The second input tells if the model should look to maximize or minimize the objective function. 
+- For example, for modeling delivery times we will likely choose to minimize
+
+#### Code
+- After importing the package, we initialize the model with LpProblem in our script and choose to maximize.
+- Next we look at defining the decision variables. For this we use the `LpVariable` class. This class has 5 inputs. First `name` : name of the variable used in the output.lp file. The next two set the lower and upper bounds of the variable `lowBound` & `upBound`. Their default value is None which sets the bounds to negative infinity for the lower bound or positive infinity for the upper bound. The `cat` input categorizes the variable as either integer, binary or continuous. The last input is related to column based modeling.
+- In our example, the variables are how many A & B cakes are produced.We only set the lower bounds and force them to be an integer variable
+- Next we define the objective function using our variables.
+- Then, we define the constraints. PuLP is able to identify which equations are constraints because of the inequalities.
+- Finally, solve the model. The optimized values are stored in `varValue`
+
+```python
+from pulp import *
+
+# initialize class
+model = LpProblem("Maximize bakery Profits", LpMaximize)
+
+LpVariable(name, lowBound=None, upBound=None, cat='Continuos', e=None)
+
+# Define Decision Variables
+A = LpVariable('A', lowBound=0, cat='Integer')
+B = LpVariable('B', lowBound=0, cat='Integer')
+
+# define objective function
+model += 20 * A + 40 * B
+
+# Define constraints
+model += 0.5 * A + 1 * B <= 30
+model += 1 * A + 2.5 * B <= 60
+model += 1 * A + 2 * B <= 22
+
+# solve model
+model.solve()
+print("Produce {} Cake A".format(A.varValue))
+print("Produce {} Cake B".format(B.varValue))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
 

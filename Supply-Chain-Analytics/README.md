@@ -124,6 +124,76 @@ print("Produce {} Cake A".format(A.varValue))
 print("Produce {} Cake B".format(B.varValue))
 ```
 
+### Using lpSum : Moving from simplex to complex
+- We saw simple bakery example. There were 2 products. What if the bakery sold 6 products or more?
+- Coding the objective function, or constraints, to sum the different varaibles together will be nearly impossible if our mode contained hundereds or thousands of varaibles. We need a method that scales.
+- The PuLP framework provides a function that does just that. `LpSum` , sums a list of linear expressions. It's only input is the list of expressions to sum. `LpSum(vector)`
+- Therefore, coding this objective function in PuLP using the addition symbol is equivalent to defining this objective function using lpSum.
+
+```python
+# define objective function
+model += 20*A + 40*B + 33*C + 14*D + 6*E +60*F
+
+# equivalent to ...
+var_list = [20*A, 40*B, 33*C, 14*D, 6*E, 60*F]
+model += lpSum(var_list)
+```
+
+#### lpSum with list comprehension
+- Often lpSum is used with Python's list comprehension. This structure makes it easy to scale the number of variables.
+
+```python
+# define objective function
+cake_types = ['A', 'B', 'C', 'D', 'E', 'F']
+profit_by_cake = {'A':20, 'B':40, 'C':33, 'D':14, 'E':6,'F':60}
+var_dict = {'A':A, 'B':B, 'C':C, 'D':D, 'E':E, 'F':F} # pulp lpvariable defined earlier
+
+model += lpSum([profit_by_cake[type] * var_dict[type] for type in cake_types])
+```
+
+### LpVariable dictionary function
+- Creating LpVariables at scale. Till now we defined each LpVariable separately, typing the code for each one, and created a dictionary called var_dict to hold them.
+- However, the LpVariable class has a method called `dicts()` that does just that.
+
+#### Using LpVariable.dicts()
+
+```python
+LpVariable(name, indexs, lowBound=None, upBound=None, cat='Continuos')
+```
+
+- It creates a dictionary of LP variables saving us the need to type each LpVariable individually. The inputs for this method are similar to the original LpVariable.
+- `name` = The prefix to the name of each LP variable created
+- `indexs` = A list of strings of the keys to the dict of LP variables. This list will be used as the keys to the dictionary returned by the method.
+- `lowBound` = Lower Bound , `upBound` = Upper bound
+- `cat` = integer, binary or continuos variable 
+
+#### LpVariable.dicts() with list comprehension
+- In Supply chain LP problems often times we need to define a decision variable for every combination of an events.
+- Using `LpVariable.dicts()` in combination with list comprehension we can compactly create those combination of decision variables.
+- For example, we may need to define a decision variable for each combination of a list of customers and warehouses.
+- In below code example, we use list comprehension to loop through every warehouse and every customer to create a larger list that contains tuples for each combination.
+
+```python
+# Transport Optimization
+
+# define decision variables
+customers = ['East', 'South', 'MidWest', 'West']
+warehouse = ['New York', 'Atlanta']
+transport = LpVariable.dicts("route", [(w,c) for w in warehouse for c in customers], lowBound=0, cat='Integer')
+
+# define objective function
+model += lpSum([cost[(w,c)] * transport[(w,c)] for w in warehouse for c in customers])
+```
+
+- The LpVariable.dicts() function then takes this combined list and creates a LpVariable for each item in it with a lowerbound of 0 and category type of Integer.
+- Here we use list comprehension when defining the objective function to multiply the cost of shipping from a warehouse to a customer and summing all of those costs together with lpSum.
+- This process allows us to create LpVariables at scale.
+
+
+
+
+
+
 
 
 

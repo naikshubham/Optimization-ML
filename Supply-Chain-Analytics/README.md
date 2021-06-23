@@ -189,8 +189,70 @@ model += lpSum([cost[(w,c)] * transport[(w,c)] for w in warehouse for c in custo
 - Here we use list comprehension when defining the objective function to multiply the cost of shipping from a warehouse to a customer and summing all of those costs together with lpSum.
 - This process allows us to create LpVariables at scale.
 
+### Example of a scheduling problem
+- Imagine we are hiring truck drivers. Table shows number of estimated drivers needed each day. How many drivers in total we need to hire?
+- In this problem each driver works for 5 consecutive days, followed by 2 days off. In US, the number of hours a driver is allowed to drive is highly regulated. Drivers are mandated to rest to eliminate the type of drowsiness that can lead to crashes.
+- If we attempt to model this problem as a LP or IP problem how do we define the decision variables?
+
+| Day of week | Drivers Needed |    |Step        | definition                     |
+|:-----------:|:--------------:|    |:----------:|:-----------------------------:||
+|0 = Monday   |    11          |    |Decision var|xi=the number of drivers working|
+|1 = Tuesday  |    14          |    |            |       on day i                 |
+|2 = Wednesday|    23          |    |Objective   |minimize=x0+x1+x2+x3+x4+x5+x6   |
+|3 = Thursday |    21          |    |subject to  | x0>=11                         |
+|4 = Friday   |    20          |    |            |x1 >=14                         |
+|5 = Saturday |    15          |    |            |x2>=23                          |
+|6 = Sunday   |    8           |    |            |x3>=21, x4 >=20, xi >=0(i=0,..6)|
 
 
+- We could define the decision variable as the number of drivers that work on each day. However, this presents a number of problems. First, in our objective function we count the same driver multiple times if they work multiple days.
+- For example, if a driver works on Monday & Tuesday the objective function is counting the same driver in the count of drivers who work on Monday and the count of drivers who work on Tuesday. This does not help us answer how many drivers do we need to hire. 
+- Also we cannot model the constraint that a driver work 5 consecutive days with two days off. It is not uncommon to begin modeling a problem and realize that we may need to adjust our decision variables.
+- What happens if we define the decision variable as the number of drivers beginning to work on day i. For X0 is the number of workers who start their 5 consecutive working day on Monday & take Saturday & Sunday off. X1 is the number of workers who start on Tuesday and have Sunday & Monday off.
+- With the decision variables in this form our objective function avoids counting the same person multiple times. In addition, our constraint regarding time off is taken care of by how we defined the decision variables. 
+
+|Step        | definition                               |
+|:----------:|:----------------------------------------:|
+|Decision var|xi=the number of drivers working on day i |
+|:----------:|:----------------------------------------:|
+|Objective   |minimize=x0+x1+x2+x3+x4+x5+x6             |
+|:----------:|:----------------------------------------:|
+|subject to  |x0 + x3 + x4 + x5 + x6 >= 11              |
+|            |x0 + x1 + x4 + x5 + x6 >= 14              |
+|            |x0 + x1 + x2 + x5 + x6 >= 23              |
+|            |x0 + x1 + x2 + x3 + x4 >= 21              |
+|            |x1 + x2 + x3 + x4 + x5 >= 15              |
+|            |xi ? 0 (i=0,.....,6)                      |
+
+- With the decision variables in this form we ensure that a minimum of 11 truckers work on Monday by summing those who start on Monday, and those who start on Thursday through Sunday.
+- We skip those who start on Tuesday and Wednesday because after their 5 working days they have Monday off. This same pattern follows through the remainder of the days. While this particular problem focused on scheduling truckers it can be applied in other contexts such as scheduling equipment mandatory downtime for preventive maintainance.
+- An important takeaway from this example is that we must choose our decision variables to incorporate some of the constraints of the problem.
+
+#### Code
+
+```python
+# initialize class
+model = LpProblem("Minimize staffing", LpMinimize)
+days = list(range(7))
+
+# define Decision variables
+x = LpVariable.dicts('staff_', days, lowBound=0, cat='Integer')
+
+# define objective
+model += lpSum([x[i] for i in days])
+
+# define constraints
+model += x[0] + x[3] + x[4] + x[5] + x[6] >= 11
+model += x[0] + x[1] + x[4] + x[5] + x[6] >= 14
+model += x[0] + x[1] + x[2] + x[5] + x[6] >= 23
+model += x[0] + x[1] + x[2] + x[3] + x[6] >= 21
+model += x[0] + x[1] + x[2] + x[3] + x[4] >= 20
+model += x[1] + x[2] + x[3] + x[4] + x[5] >= 15
+model += x[2] + x[3] + x[4] + x[5] + x[6] >= 8
+
+# solve model
+model.solve()
+```
 
 
 
